@@ -1,111 +1,226 @@
 const socket = io();
-const mainContainer = document.getElementById('main-container');
 
+let currentState = 0;
+let maracaUnlocked = false;
+let isShaking = false;
+let shakeIntensity = 0;
+let lastShakeTime = 0;
 let maracaSound;
-let maracaActivated = false;
-let lastSentTime = 0;
-const throttleDelay = 100; // Limita el envío de datos a 10 veces por segundo
+let accelerometerData = { x: 0, y: 0, z: 0 };
+let gyroscopeData = { x: 0, y: 0, z: 0 };
 
-// Función de P5.js para precargar assets
-function preload() {
-    maracaSound = loadSound('../assets/sonido/maracas.mp3');
-}
-
-// Función de P5.js que se ejecuta una vez
 function setup() {
-    noCanvas();
+    createCanvas(windowWidth, windowHeight);
+    background(255);
     
-    // 1. Manejar la señal para el Estado 3 (crear la interfaz y esperar la foto)
-    socket.on('cambiar_a_escena_3', () => {
-        console.log('Señal recibida para el Estado 3. Creando la interfaz de la maraca.');
-        
-        const maracaContainer = document.createElement('div');
-        maracaContainer.id = 'main-container';
-        maracaContainer.innerHTML = `
-            <h1>Estado 3</h1>
-            <p id="status-message">Esperando la foto...</p>
-        `;
-        
-        mainContainer.appendChild(maracaContainer);
+    // Solicitar permisos para sensores en dispositivos móviles
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission();
+    }
+    
+    // Cargar sonido de maraca
+    maracaSound = loadSound('../assets/sonido/maracas.mp3');
+    
+    // Escuchar eventos del servidor
+    socket.on('currentState', (data) => {
+        currentState = data.state;
+        maracaUnlocked = data.maracaUnlocked;
     });
-
-    // 2. Manejador para el evento de activación de la maraca
-    socket.on('activar_maraca', () => {
-        console.log('Señal de activación de maraca recibida.');
-        const statusMessage = document.getElementById('status-message');
-        const title = mainContainer.querySelector('h1');
-
-        if (title) title.textContent = "¡Es hora de agitar!";
-        if (statusMessage) {
-            statusMessage.textContent = '¡Maraca activada! Sacude tu teléfono...';
-        }
+    
+    socket.on('stateChanged', (data) => {
+        currentState = data.state;
+        maracaUnlocked = data.maracaUnlocked;
         
-        // La activación real de la maraca ocurre aquí
-        maracaActivated = true;
-        
-        // IMPORTANTE: Solicitud de permiso para iOS y activación del listener
-        if (typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        console.log('Permiso de sensores concedido.');
-                        window.addEventListener('devicemotion', handleMotion);
-                        maracaSound.play().catch(e => console.log("Audio desbloqueado."));
-                    } else {
-                        statusMessage.textContent = 'Permiso denegado. No se puede activar la maraca.';
-                    }
-                })
-                .catch(console.error);
-        } else {
-            window.addEventListener('devicemotion', handleMotion);
-            maracaSound.play().catch(e => console.log("Audio desbloqueado."));
-            console.log('Permiso no requerido. Maraca activada.');
+        if (currentState === 3) {
+            showMaracaInterface();
         }
     });
+    
+    socket.on('maracaUnlocked', () => {
+        maracaUnlocked = true;
+        showMaracaReady();
+    });
+    
+    // Configurar sensores de movimiento
+    setupMotionSensors();
 }
 
-// 3. Función para procesar los datos de movimiento (devicemotion)
-function deviceMoved(event) {
-    alert('Device moved');
-    // if (!maracaActivated) return;
-
-    // Obtener datos de aceleración y rotación
-    const acceleration = event.accelerationIncludingGravity;
-    const rotation = event.rotationRate;
-    
-    // Calcular la magnitud del movimiento (para detectar un "agitón")
-    const magnitude = Math.sqrt(
-        acceleration.x * acceleration.x +
-        acceleration.y * acceleration.y +
-        acceleration.z * acceleration.z
-    );
-
-    const threshold = 20; // Umbral de movimiento para activar la maraca
-
-    // Si la magnitud supera el umbral y ha pasado suficiente tiempo
-    if (magnitude > threshold && (Date.now() - lastSentTime > throttleDelay)) {
-        console.log('¡Agitando! Enviando datos de sensores...');
-        
-        const statusMessage = document.getElementById('status-message');
-        if (statusMessage) {
-            statusMessage.textContent = '¡Agitando! 🎸';
-            setTimeout(() => {
-                if (statusMessage) {
-                    statusMessage.textContent = '¡Maraca activada! Sacude tu teléfono...';
-                }
-            }, 500);
-        }
-
-        // Reproducir el sonido
-        maracaSound.currentTime = 0;
-        maracaSound.play();
-
-        // Enviar los datos detallados al servidor
-        socket.emit('maraca_agitada', {
-            acceleration: { x: acceleration.x, y: acceleration.y, z: acceleration.z },
-            rotation: { alpha: rotation.alpha, beta: rotation.beta, gamma: rotation.gamma }
-        });
-
-        lastSentTime = Date.now();
+function draw() {
+    if (currentState === 0) {
+        showWaitingScreen();
+    } else if (currentState === 1) {
+        showState1();
+    } else if (currentState === 2) {
+        showState2();
+    } else if (currentState === 3) {
+        showState3();
     }
+}
+
+function showWaitingScreen() {
+    background(255);
+    fill(0);
+    textAlign(CENTER);
+    textSize(24);
+    text("ESPERANDO ACTIVACIÓN", width/2, height/2);
+}
+
+function showState1() {
+    background(255);
+    fill(0);
+    textAlign(CENTER);
+    textSize(24);
+    text("ESTADO 1", width/2, height/2);
+}
+
+function showState2() {
+    background(255);
+    fill(0);
+    textAlign(CENTER);
+    textSize(24);
+    text("ESTADO 2", width/2, height/2);
+}
+
+function showState3() {
+    if (!maracaUnlocked) {
+        showMaracaInterface();
+    } else {
+        showMaracaActive();
+    }
+}
+
+function showMaracaInterface() {
+    background(255);
+    fill(0);
+    textAlign(CENTER);
+    textSize(32);
+    text("MARACA", width/2, height/2 - 50);
+    
+    textSize(20);
+    text("Esperando desbloqueo...", width/2, height/2 + 20);
+    
+    // Mostrar icono de maraca
+    fill(139, 69, 19);
+    ellipse(width/2, height/2 + 100, 80, 120);
+}
+
+function showMaracaReady() {
+    background(0, 255, 0);
+    fill(255);
+    textAlign(CENTER);
+    textSize(32);
+    text("¡MARACA LISTA!", width/2, height/2);
+    
+    textSize(20);
+    text("Agita tu teléfono", width/2, height/2 + 50);
+}
+
+function showMaracaActive() {
+    background(255);
+    
+    // Mostrar interfaz de maraca activa
+    fill(0);
+    textAlign(CENTER);
+    textSize(28);
+    text("MARACA ACTIVA", width/2, 50);
+    
+    // Mostrar intensidad del movimiento
+    let intensity = getShakeIntensity();
+    fill(255, 0, 0);
+    rect(50, 100, intensity * 2, 30);
+    
+    // Mostrar mensaje si está agitando
+    if (isShaking) {
+        fill(255, 0, 0);
+        textSize(24);
+        text("¡AGITANDO!", width/2, height/2);
+    }
+    
+    // Mostrar datos de sensores
+    fill(0);
+    textSize(16);
+    textAlign(LEFT);
+    text(`Acelerómetro X: ${accelerometerData.x.toFixed(2)}`, 20, 200);
+    text(`Acelerómetro Y: ${accelerometerData.y.toFixed(2)}`, 20, 220);
+    text(`Acelerómetro Z: ${accelerometerData.z.toFixed(2)}`, 20, 240);
+    text(`Giroscopio X: ${gyroscopeData.x.toFixed(2)}`, 20, 280);
+    text(`Giroscopio Y: ${gyroscopeData.y.toFixed(2)}`, 20, 300);
+    text(`Giroscopio Z: ${gyroscopeData.z.toFixed(2)}`, 20, 320);
+}
+
+function setupMotionSensors() {
+    // Escuchar eventos de movimiento del dispositivo
+    window.addEventListener('devicemotion', handleMotion);
+    window.addEventListener('deviceorientation', handleOrientation);
+}
+
+function handleMotion(event) {
+    if (currentState === 3 && maracaUnlocked) {
+        accelerometerData = {
+            x: event.acceleration.x || 0,
+            y: event.acceleration.y || 0,
+            z: event.acceleration.z || 0
+        };
+        
+        // Detectar agitación
+        let intensity = getShakeIntensity();
+        if (intensity > 15) {
+            triggerShake();
+        }
+        
+        // Enviar datos al servidor
+        socket.emit('maracaData', {
+            accelerometer: accelerometerData,
+            gyroscope: gyroscopeData,
+            intensity: intensity,
+            timestamp: Date.now()
+        });
+    }
+}
+
+function handleOrientation(event) {
+    if (currentState === 3 && maracaUnlocked) {
+        gyroscopeData = {
+            x: event.alpha || 0,
+            y: event.beta || 0,
+            z: event.gamma || 0
+        };
+    }
+}
+
+function getShakeIntensity() {
+    let totalAcceleration = Math.sqrt(
+        accelerometerData.x * accelerometerData.x +
+        accelerometerData.y * accelerometerData.y +
+        accelerometerData.z * accelerometerData.z
+    );
+    return totalAcceleration;
+}
+
+function triggerShake() {
+    if (!isShaking) {
+        isShaking = true;
+        lastShakeTime = millis();
+        
+        // Reproducir sonido de maraca
+        if (maracaSound) {
+            maracaSound.play();
+        }
+        
+        // Enviar evento de agitación al servidor
+        socket.emit('maracaData', {
+            type: 'shake',
+            intensity: getShakeIntensity(),
+            timestamp: Date.now()
+        });
+        
+        // Resetear estado de agitación después de un tiempo
+        setTimeout(() => {
+            isShaking = false;
+        }, 500);
+    }
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
 }

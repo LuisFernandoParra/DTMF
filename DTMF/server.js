@@ -1,4 +1,3 @@
-// Importar módulos necesarios
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -10,83 +9,92 @@ const io = new Server(server);
 
 const port = process.env.PORT || 3000;
 
-// Servir archivos estáticos (HTML, CSS, JS) desde la carpeta 'public'
-app.use(express.static(path.join(__dirname, 'public')));
+// Estado global del sistema
+let currentState = 0; // 0 = inactivo, 1 = estado 1, 2 = estado 2, 3 = estado 3
+let photoData = null;
+let musicPlaying = false;
+let photoUnlocked = false;
+let maracaUnlocked = false;
 
-let fotoActual = null; // Variable para almacenar la foto tomada
-let stickers = []; // Array para almacenar los stickers y sus posiciones
+app.use(express.static(path.join(__dirname, 'public')));
 
 io.on('connection', (socket) => {
     console.log(`Usuario conectado: ${socket.id}`);
-
-    // Manejar el evento para activar el Estado 3 (del cliente Remote)
-    socket.on('activar_estado_3', () => {
-        console.log('Señal de activación del Estado 3 recibida del Remoto.');
-        // Emitir a todos los clientes para que cambien de escena
-        io.emit('cambiar_a_escena_3');
-        // El visualizador recibe esta señal y muestra "Junten todos para la foto"
+    
+    // Enviar estado actual al cliente que se conecta
+    socket.emit('currentState', {
+        state: currentState,
+        musicPlaying: musicPlaying,
+        photoUnlocked: photoUnlocked,
+        maracaUnlocked: maracaUnlocked,
+        photoData: photoData
     });
 
-    // Manejar el evento para habilitar el botón de la foto (del cliente Remote)
-    socket.on('habilitar_foto_desktop', () => {
-        console.log('Habilitando botón de foto en el cliente Desktop.');
-        // Emitir un evento específico al cliente Desktop
-        // Puedes usar io.to(socket.id) si solo quieres enviarlo a un socket,
-        // pero en este caso queremos que lo reciba el cliente Desktop que esté conectado
-        io.emit('habilitar_foto');
+    // Manejo de cambio de estado (desde remoto)
+    socket.on('changeState', (data) => {
+        console.log(`Cambio de estado a: ${data.state}`);
+        currentState = data.state;
+        
+        // Resetear flags cuando se cambia de estado
+        if (currentState !== 3) {
+            photoUnlocked = false;
+            maracaUnlocked = false;
+            photoData = null;
+        }
+        
+        // Notificar a todos los clientes
+        io.emit('stateChanged', {
+            state: currentState,
+            musicPlaying: musicPlaying,
+            photoUnlocked: photoUnlocked,
+            maracaUnlocked: maracaUnlocked
+        });
     });
 
-    // Manejar la foto enviada por el Cliente Desktop
-    socket.on('foto_tomada', (imageData) => {
-        console.log('Foto recibida del Desktop.');
-        fotoActual = imageData; // Guardar la foto en el servidor
-        stickers = []; // Reiniciar los stickers para la nueva foto
-
-        // Enviar la foto al Visualizador y al Mobile B
-        io.emit('mostrar_foto', fotoActual);
-
-        // Enviar una señal específica a Mobile A para que active la maraca
-        io.emit('activar_maraca');
-        console.log('Enviando señal para activar la maraca.');
+    // Control de música (desde remoto)
+    socket.on('toggleMusic', (data) => {
+        musicPlaying = data.playing;
+        io.emit('musicControl', { playing: musicPlaying });
     });
 
-    // Manejar los datos de la maraca del Cliente Mobile A
-    socket.on('maraca_agitada', (data) => {
-        console.log(`Movimiento de maraca detectado: x=${data.x}`);
-        // Retransmitir la información al Visualizador
-        io.emit('efecto_maraca', data);
+    // Desbloquear foto (desde remoto)
+    socket.on('unlockPhoto', () => {
+        if (currentState === 3) {
+            photoUnlocked = true;
+            io.emit('photoUnlocked');
+        }
     });
 
-    // Manejar los datos del sticker del Cliente Mobile B
-    socket.on('sticker_enviado', (stickerData) => {
-        console.log(`Sticker recibido del Mobile B: ${stickerData.stickerId}`);
-        // Guardar el sticker y sus coordenadas
-        stickers.push(stickerData);
-        // Enviar la información al Visualizador para que lo dibuje
-        io.emit('agregar_sticker_visualizador', stickerData);
+    // Desbloquear maraca (desde remoto)
+    socket.on('unlockMaraca', () => {
+        if (currentState === 3) {
+            maracaUnlocked = true;
+            io.emit('maracaUnlocked');
+        }
     });
 
-    // Manejar el evento para finalizar la experiencia (del cliente Remote)
-    socket.on('finalizar_experiencia', () => {
-        console.log('Señal de finalización recibida. Preparando foto final.');
-
-        // Construir la foto final con todos los stickers
-        // Aquí necesitarás lógica más compleja si quieres "pegar" los stickers
-        // en la imagen final en el servidor. O, simplemente, puedes enviar
-        // la foto original y el array de stickers a los clientes móviles.
-
-        // Opción 1 (más simple): Enviar la foto original y el array de stickers
-        io.emit('mostrar_foto_final', { foto: fotoActual, stickers: stickers });
+    // Recibir foto desde desktop
+    socket.on('photoTaken', (data) => {
+        if (currentState === 3) {
+            photoData = data.photoData;
+            io.emit('photoReceived', { photoData: photoData });
+        }
     });
 
-    // Manejar los controles de música del Remoto
-    socket.on('control_musica', (action) => {
-        console.log(`Orden de música recibida: ${action}`);
-        // Reenviar la orden al Visualizador
-        io.emit('control_musica_visualizador', action);
+    // Datos de maraca desde mobile 1
+    socket.on('maracaData', (data) => {
+        if (currentState === 3 && maracaUnlocked) {
+            io.emit('maracaMovement', data);
+        }
     });
 
-    // Manejar la desconexión del usuario
+    // Sticker desde mobile 2
+    socket.on('stickerPlaced', (data) => {
+        if (currentState === 3 && photoData) {
+            io.emit('stickerAdded', data);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log(`Usuario desconectado: ${socket.id}`);
     });
