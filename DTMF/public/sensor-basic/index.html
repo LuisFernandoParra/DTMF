@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba Básica de Sensores</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+        }
+        
+        .container {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #0f0;
+        }
+        
+        .button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 20px;
+            font-size: 1.5em;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 20px 0;
+            width: 100%;
+            font-weight: bold;
+        }
+        
+        .button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .data {
+            background: #111;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .value {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .status {
+            background: #222;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 SENSORES</h1>
+        
+        <div class="status" id="status">
+            Presiona INICIAR
+        </div>
+        
+        <button class="button" id="start-btn">INICIAR</button>
+        <button class="button" id="stop-btn" disabled>DETENER</button>
+        
+        <div class="data">
+            <div>X: <span class="value" id="x">0</span></div>
+            <div>Y: <span class="value" id="y">0</span></div>
+            <div>Z: <span class="value" id="z">0</span></div>
+        </div>
+        
+        <div class="data">
+            <div>Alpha: <span class="value" id="alpha">0</span></div>
+            <div>Beta: <span class="value" id="beta">0</span></div>
+            <div>Gamma: <span class="value" id="gamma">0</span></div>
+        </div>
+    </div>
+
+    <script>
+        let active = false;
+        
+        const status = document.getElementById('status');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        
+        const x = document.getElementById('x');
+        const y = document.getElementById('y');
+        const z = document.getElementById('z');
+        const alpha = document.getElementById('alpha');
+        const beta = document.getElementById('beta');
+        const gamma = document.getElementById('gamma');
+        
+        function updateStatus(msg) {
+            status.textContent = msg;
+        }
+        
+        function handleMotion(event) {
+            if (!active) return;
+            
+            // Acelerómetro
+            const accel = event.accelerationIncludingGravity;
+            if (accel) {
+                x.textContent = (accel.x || 0).toFixed(1);
+                y.textContent = (accel.y || 0).toFixed(1);
+                z.textContent = (accel.z || 0).toFixed(1);
+            }
+            
+            // Giroscopio
+            const gyro = event.rotationRate;
+            if (gyro) {
+                alpha.textContent = (gyro.alpha || 0).toFixed(1);
+                beta.textContent = (gyro.beta || 0).toFixed(1);
+                gamma.textContent = (gyro.gamma || 0).toFixed(1);
+            }
+        }
+        
+        async function start() {
+            updateStatus('Solicitando permisos...');
+            
+            if (typeof DeviceMotionEvent === 'undefined') {
+                updateStatus('ERROR: No disponible');
+                return;
+            }
+            
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceMotionEvent.requestPermission();
+                    if (permission !== 'granted') {
+                        updateStatus('ERROR: Permisos denegados');
+                        return;
+                    }
+                } catch (error) {
+                    updateStatus('ERROR: ' + error.message);
+                    return;
+                }
+            }
+            
+            window.addEventListener('devicemotion', handleMotion);
+            active = true;
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            
+            updateStatus('ACTIVO - Mueve el dispositivo');
+        }
+        
+        function stop() {
+            window.removeEventListener('devicemotion', handleMotion);
+            active = false;
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            
+            updateStatus('DETENIDO');
+        }
+        
+        startBtn.addEventListener('click', start);
+        stopBtn.addEventListener('click', stop);
+        
+        updateStatus('Listo para probar');
+    </script>
+</body>
+</html>

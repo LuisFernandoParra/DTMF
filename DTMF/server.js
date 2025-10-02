@@ -17,24 +17,36 @@ let fotoActual = null; // Variable para almacenar la foto tomada
 let stickers = []; // Array para almacenar los stickers y sus posiciones
 
 io.on('connection', (socket) => {
-    console.log(`Usuario conectado: ${socket.id}`);
+    console.log('🔗 ===== NUEVA CONEXIÓN =====');
+    console.log('👤 Usuario conectado:', socket.id);
+    console.log('🌐 IP:', socket.handshake.address);
+    console.log('📱 User Agent:', socket.handshake.headers['user-agent']);
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    console.log('🔗 ===========================');
 
     // Manejar el evento para activar el Estado 3 (del cliente Remote)
     socket.on('activar_estado_3', () => {
-        console.log('Señal de activación del Estado 3 recibida del Remoto.');
+        console.log('🎬 ===== ACTIVANDO ESTADO 3 =====');
+        console.log('📱 Señal recibida del Remoto:', socket.id);
+        console.log('🔄 Enviando "cambiar_a_escena_3" a todos los clientes');
         // Emitir a todos los clientes para que cambien de escena
         io.emit('cambiar_a_escena_3');
-        // El visualizador recibe esta señal y muestra "Junten todos para la foto"
+        console.log('✅ Estado 3 activado - todos los clientes notificados');
+        console.log('🎬 ===================================');
     });
 
     // Manejar el evento para habilitar el botón de la foto (del cliente Remote)
     socket.on('habilitar_foto_desktop', () => {
-        console.log('Habilitando botón de foto en el cliente Desktop.');
+        console.log('📸 ===== HABILITANDO FOTO =====');
+        console.log('📱 Señal recibida del Remoto:', socket.id);
+        console.log('🔄 Enviando "habilitar_foto" a todos los clientes');
         // Emitir un evento específico al cliente Desktop
         // Puedes usar io.to(socket.id) si solo quieres enviarlo a un socket,
         // pero en este caso queremos que lo reciba el cliente Desktop que esté conectado
         io.emit('habilitar_foto');
         io.emit('mostrar_gif_sonrie');
+        console.log('✅ Botón de foto habilitado - Desktop puede tomar foto');
+        console.log('📸 ===============================');
     });
 
     // Manejar la foto enviada por el Cliente Desktop
@@ -47,15 +59,47 @@ io.on('connection', (socket) => {
         io.emit('mostrar_foto', fotoActual);
 
         // Enviar una señal específica a Mobile A para que active la maraca
+        console.log('🎸 ===== ACTIVANDO MARACA =====');
+        console.log('📱 Enviando señal "activar_maraca" a todos los clientes');
         io.emit('activar_maraca');
-        console.log('Enviando señal para activar la maraca.');
+        console.log('✅ Señal de activación de maraca enviada');
+        console.log('🎸 ================================');
     });
 
     // Manejar los datos de la maraca del Cliente Mobile A
     socket.on('maraca_agitada', (data) => {
-        console.log(`Movimiento de maraca detectado: x=${data.x}`);
+        console.log('🎸 ===== DATOS DE MARACA RECIBIDOS =====');
+        console.log('📱 Socket ID:', socket.id);
+        console.log('📊 Datos recibidos:', JSON.stringify(data, null, 2));
+        
+        if (data.test) {
+            if (data.automatic) {
+                console.log('🤖 SEÑAL DE PRUEBA AUTOMÁTICA - La conexión funciona!');
+            } else if (data.manual) {
+                console.log('👆 SEÑAL DE PRUEBA MANUAL - La conexión funciona!');
+            } else {
+                console.log('🧪 SEÑAL DE PRUEBA RECIBIDA - La conexión funciona!');
+            }
+        } else if (data.real) {
+            console.log('🎯 DATOS REALES DE SENSORES:');
+            console.log('   X:', data.x);
+            console.log('   Y:', data.y);
+            console.log('   Z:', data.z);
+            console.log('   Magnitud:', data.magnitude);
+        } else {
+            console.log('📈 Valores específicos:');
+            console.log('   X:', data.x);
+            console.log('   Y:', data.y);
+            console.log('   Z:', data.z);
+        }
+        
+        console.log('⏰ Timestamp:', new Date().toISOString());
+        console.log('🔄 Reenviando al visualizador...');
+        
         // Retransmitir la información al Visualizador
         io.emit('efecto_maraca', data);
+        console.log('✅ Datos enviados al visualizador');
+        console.log('🎸 ======================================');
     });
 
     // Manejar los datos del sticker del Cliente Mobile B

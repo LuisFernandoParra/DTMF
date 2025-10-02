@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba Simple de Sensores</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        
+        .sensor-box {
+            background: #333;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            width: 100%;
+        }
+        
+        .button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            background: #444;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .log {
+            background: #222;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Prueba de Sensores</h1>
+        
+        <div class="status" id="status">
+            Presiona "Iniciar" para comenzar
+        </div>
+        
+        <button class="button" id="start-btn">Iniciar Sensores</button>
+        <button class="button" id="stop-btn" disabled>Detener</button>
+        
+        <div class="sensor-box">
+            <h3>Acelerómetro</h3>
+            <div>X: <span class="value" id="x">0</span></div>
+            <div>Y: <span class="value" id="y">0</span></div>
+            <div>Z: <span class="value" id="z">0</span></div>
+        </div>
+        
+        <div class="sensor-box">
+            <h3>Giroscopio</h3>
+            <div>Alpha: <span class="value" id="alpha">0</span></div>
+            <div>Beta: <span class="value" id="beta">0</span></div>
+            <div>Gamma: <span class="value" id="gamma">0</span></div>
+        </div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        let isActive = false;
+        
+        const status = document.getElementById('status');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const log = document.getElementById('log');
+        
+        // Elementos de valores
+        const xEl = document.getElementById('x');
+        const yEl = document.getElementById('y');
+        const zEl = document.getElementById('z');
+        const alphaEl = document.getElementById('alpha');
+        const betaEl = document.getElementById('beta');
+        const gammaEl = document.getElementById('gamma');
+        
+        function addLog(message) {
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `[${time}] ${message}<br>`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function updateStatus(message) {
+            status.textContent = message;
+        }
+        
+        function handleMotion(event) {
+            if (!isActive) return;
+            
+            // Acelerómetro
+            const accel = event.accelerationIncludingGravity;
+            if (accel) {
+                xEl.textContent = (accel.x || 0).toFixed(2);
+                yEl.textContent = (accel.y || 0).toFixed(2);
+                zEl.textContent = (accel.z || 0).toFixed(2);
+            }
+            
+            // Giroscopio
+            const gyro = event.rotationRate;
+            if (gyro) {
+                alphaEl.textContent = (gyro.alpha || 0).toFixed(2);
+                betaEl.textContent = (gyro.beta || 0).toFixed(2);
+                gammaEl.textContent = (gyro.gamma || 0).toFixed(2);
+            }
+        }
+        
+        async function startSensors() {
+            addLog('Iniciando sensores...');
+            
+            // Verificar disponibilidad
+            if (typeof DeviceMotionEvent === 'undefined') {
+                addLog('ERROR: DeviceMotionEvent no disponible');
+                updateStatus('Sensores no disponibles');
+                return;
+            }
+            
+            // Solicitar permisos en iOS
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    addLog('Solicitando permisos...');
+                    const permission = await DeviceMotionEvent.requestPermission();
+                    addLog(`Permiso: ${permission}`);
+                    
+                    if (permission !== 'granted') {
+                        addLog('ERROR: Permisos denegados');
+                        updateStatus('Permisos denegados');
+                        return;
+                    }
+                } catch (error) {
+                    addLog(`ERROR: ${error.message}`);
+                    updateStatus('Error solicitando permisos');
+                    return;
+                }
+            }
+            
+            // Agregar listener
+            window.addEventListener('devicemotion', handleMotion);
+            isActive = true;
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            
+            addLog('Sensores iniciados - mueve el dispositivo');
+            updateStatus('Sensores activos');
+        }
+        
+        function stopSensors() {
+            window.removeEventListener('devicemotion', handleMotion);
+            isActive = false;
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            
+            addLog('Sensores detenidos');
+            updateStatus('Sensores detenidos');
+        }
+        
+        // Event listeners
+        startBtn.addEventListener('click', startSensors);
+        stopBtn.addEventListener('click', stopSensors);
+        
+        // Información inicial
+        addLog('Sistema iniciado');
+        addLog(`DeviceMotionEvent: ${typeof DeviceMotionEvent !== 'undefined'}`);
+        addLog(`requestPermission: ${typeof DeviceMotionEvent.requestPermission === 'function'}`);
+    </script>
+</body>
+</html>
