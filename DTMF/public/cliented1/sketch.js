@@ -255,7 +255,41 @@ if (typeof io !== 'undefined') {
         photoEnabled = true;
         showReadyInterface();
     });
+    
+    // Finalizar experiencia (volver a estado neutral)
+    socket.on('finalizar_experiencia', () => {
+        photoEnabled = false;
+        showNeutralState();
+    });
 }
 
-// Mostrar interfaz inicial
-showWaitingInterface();
+// Función para mostrar estado neutral inicial
+function showNeutralState() {
+    mainContainer.innerHTML = `
+        <div class="header">
+            <h1>📸 Bad Bunny DTMF</h1>
+            <p class="subtitle">Cliente Desktop - Esperando instrucciones</p>
+        </div>
+        
+        <div class="status-indicator">
+            <p class="status-text">
+                <span class="waiting-animation">⏳</span> 
+                Sistema en espera
+            </p>
+            <p class="status-subtext">Esperando activación desde el control remoto</p>
+        </div>
+        
+        <div class="camera-section">
+            <div class="camera-preview">
+                <div class="camera-placeholder">
+                    <div class="icon">💻</div>
+                    <p>Cliente de producción listo</p>
+                    <p style="font-size: 0.8em; margin-top: 10px;">La cámara se activará automáticamente</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Mostrar estado inicial neutral
+showNeutralState();

@@ -1,5 +1,7 @@
 const socket = io();
 
+let currentState = 0; // 0 = esperando, 2 = pistolas, 3 = foto
+
 // Función para mostrar notificaciones
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
@@ -24,7 +26,6 @@ function showNotification(message, type = 'success') {
 // Función para deshabilitar botón temporalmente
 function disableButtonTemporarily(button, duration = 2000) {
     const originalText = button.innerHTML;
-    const originalClass = button.className;
     
     button.disabled = true;
     button.style.opacity = '0.6';
@@ -37,31 +38,94 @@ function disableButtonTemporarily(button, duration = 2000) {
     }, duration);
 }
 
+// Función para actualizar el indicador de estado
+function updateStateIndicator(state) {
+    const stateIndicator = document.getElementById('state-indicator');
+    const stateText = document.getElementById('state-text');
+    
+    switch(state) {
+        case 0:
+            stateIndicator.textContent = '⏳';
+            stateText.textContent = 'Sistema en espera - Selecciona un estado para comenzar';
+            break;
+        case 2:
+            stateIndicator.textContent = '🔫';
+            stateText.textContent = 'Estado 2 Activo: Pistolas de Bengalas';
+            break;
+        case 3:
+            stateIndicator.textContent = '📸';
+            stateText.textContent = 'Estado 3 Activo: Foto Grupal y Maraca';
+            break;
+    }
+}
+
+// Función para mostrar/ocultar controles según el estado
+function toggleStateControls(state) {
+    const estado2Controls = document.getElementById('estado2-controls');
+    const estado3Controls = document.getElementById('estado3-controls');
+    
+    // Ocultar todos los controles primero
+    estado2Controls.classList.add('hidden');
+    estado3Controls.classList.add('hidden');
+    
+    // Mostrar controles relevantes
+    if (state === 2) {
+        estado2Controls.classList.remove('hidden');
+    } else if (state === 3) {
+        estado3Controls.classList.remove('hidden');
+    }
+    
+    currentState = state;
+    updateStateIndicator(state);
+}
+
 // Event Listeners para los botones
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Estado 2 - Fuegos artificiales
+    // Estado 2 - Pistolas de bengalas
     const btnEstado2 = document.getElementById('btn-estado2');
+    const btnDisparar = document.getElementById('btn-disparar');
+    
     if (btnEstado2) {
         btnEstado2.addEventListener('click', () => {
             socket.emit('iniciar_estado_2');
-            showNotification('🎆 Estado 2 activado - Fuegos artificiales iniciados');
+            showNotification('🔫 Estado 2 activado - Pistolas de bengalas listas');
             disableButtonTemporarily(btnEstado2);
+            toggleStateControls(2);
+        });
+    }
+    
+    if (btnDisparar) {
+        btnDisparar.addEventListener('click', () => {
+            socket.emit('disparar_bengalas');
+            showNotification('💥 ¡ORDEN DE DISPARO ENVIADA!', 'warning');
+            
+            // Efecto visual en el botón
+            btnDisparar.style.animation = 'none';
+            btnDisparar.style.background = 'linear-gradient(45deg, #ff4757, #ff3742)';
+            btnDisparar.innerHTML = '🔥 ¡DISPARANDO!';
+            
+            setTimeout(() => {
+                btnDisparar.innerHTML = '💥 ¡DISPARAR BENGALAS!<div style="font-size: 0.8em; margin-top: 5px;">Orden de fuego</div>';
+                btnDisparar.style.background = '';
+            }, 2000);
         });
     }
     
     // Estado 3 - Foto y maraca
     const btnEstado3 = document.getElementById('btn-estado3');
+    const btnFoto = document.getElementById('btn-foto');
+    const btnFinalizar = document.getElementById('btn-finalizar');
+    
     if (btnEstado3) {
         btnEstado3.addEventListener('click', () => {
             socket.emit('activar_estado_3');
             showNotification('📸 Estado 3 activado - Preparando foto grupal');
             disableButtonTemporarily(btnEstado3);
+            toggleStateControls(3);
         });
     }
     
-    // Habilitar foto
-    const btnFoto = document.getElementById('btn-foto');
     if (btnFoto) {
         btnFoto.addEventListener('click', () => {
             socket.emit('habilitar_foto_desktop');
@@ -70,19 +134,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Finalizar experiencia
-    const btnFinalizar = document.getElementById('btn-finalizar');
     if (btnFinalizar) {
         btnFinalizar.addEventListener('click', () => {
             if (confirm('¿Estás seguro de que quieres finalizar la experiencia?')) {
                 socket.emit('finalizar_experiencia');
                 showNotification('🏁 Experiencia finalizada', 'warning');
                 disableButtonTemporarily(btnFinalizar, 5000);
+                
+                // Volver al estado inicial
+                setTimeout(() => {
+                    toggleStateControls(0);
+                }, 3000);
             }
         });
     }
     
-    // Controles de música
+    // Controles de música (siempre disponibles)
     const playBtn = document.getElementById('play-btn');
     const pauseBtn = document.getElementById('pause-btn');
     const forwardBtn = document.getElementById('forward-btn');
@@ -155,3 +222,6 @@ function updateConnectionStatus() {
 
 // Actualizar estado cada 5 segundos
 setInterval(updateConnectionStatus, 5000);
+
+// Inicializar en estado 0
+updateStateIndicator(0);

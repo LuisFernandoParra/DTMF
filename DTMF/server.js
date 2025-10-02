@@ -15,6 +15,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 let fotoActual = null; // Variable para almacenar la foto tomada
 let stickers = []; // Array para almacenar los stickers y sus posiciones
+let selfies = []; // Array para almacenar las selfies de los móviles
 
 io.on('connection', (socket) => {
     console.log('🔗 ===== NUEVA CONEXIÓN =====');
@@ -111,17 +112,54 @@ io.on('connection', (socket) => {
         io.emit('agregar_sticker_visualizador', stickerData);
     });
 
+    // Manejar selfies de los móviles
+    socket.on('selfie_tomada', (selfieData) => {
+        console.log('🤳 ===== SELFIE RECIBIDA =====');
+        console.log('📱 Móvil ID:', selfieData.mobileId);
+        console.log('📊 Tamaño de imagen:', selfieData.imageData.length, 'caracteres');
+        console.log('⏰ Timestamp:', new Date().toISOString());
+        
+        // Guardar la selfie
+        const selfie = {
+            mobileId: selfieData.mobileId,
+            imageData: selfieData.imageData,
+            timestamp: Date.now(),
+            socketId: socket.id
+        };
+        
+        selfies.push(selfie);
+        console.log('📸 Total de selfies recibidas:', selfies.length);
+        
+        // Enviar selfie al visualizador para agregar al collage
+        io.emit('agregar_selfie_collage', selfie);
+        
+        console.log('✅ Selfie agregada al collage');
+        console.log('🤳 ============================');
+    });
+
     // Manejar el evento para finalizar la experiencia (del cliente Remote)
     socket.on('finalizar_experiencia', () => {
-        console.log('Señal de finalización recibida. Preparando foto final.');
+        console.log('🏁 ===== FINALIZANDO EXPERIENCIA =====');
+        console.log('📱 Enviando señal de finalización a todos los clientes...');
 
-        // Construir la foto final con todos los stickers
-        // Aquí necesitarás lógica más compleja si quieres "pegar" los stickers
-        // en la imagen final en el servidor. O, simplemente, puedes enviar
-        // la foto original y el array de stickers a los clientes móviles.
-
-        // Opción 1 (más simple): Enviar la foto original y el array de stickers
-        io.emit('mostrar_foto_final', { foto: fotoActual, stickers: stickers });
+        // Si hay foto y stickers, mostrar foto final
+        if (fotoActual) {
+            io.emit('mostrar_foto_final', { foto: fotoActual, stickers: stickers });
+        }
+        
+        // Enviar señal de finalización a todos los clientes
+        io.emit('finalizar_experiencia');
+        
+        // Resetear variables del servidor
+        setTimeout(() => {
+            fotoActual = null;
+            stickers = [];
+            selfies = [];
+            console.log('🔄 Variables del servidor reseteadas');
+        }, 3000);
+        
+        console.log('✅ Experiencia finalizada');
+        console.log('🏁 =====================================');
     });
 
     // Manejar los controles de música del Remoto
@@ -138,26 +176,63 @@ io.on('connection', (socket) => {
 
      // 1. MANEJADOR PARA INICIAR EL ESTADO 2 (Recibido desde el Remoto)
     socket.on('iniciar_estado_2', () => {
-        console.log('--- INICIANDO ESTADO 2: PETARDOS Y TIROS ---');
-        // Enviar señal a TODOS los móviles (A y B) para que activen sus sensores.
-        // Usaremos el mismo evento para ambos, ya que la lógica en los móviles será similar.
-        io.emit('activar_estado_2_moviles');
+        console.log('🎆 ===== INICIANDO ESTADO 2: PISTOLAS DE BENGALAS =====');
+        console.log('📱 Activando pistolas en móviles...');
         
-        // Opcional: Si el Visualizador necesita una señal para cambiar de estado/pantalla.
+        // Enviar señal a TODOS los móviles para que se conviertan en pistolas
+        io.emit('activar_pistolas_bengalas');
+        
+        // Cambiar visualizador a modo Estado 2
         io.emit('cambiar_a_escena_2');
+        
+        console.log('✅ Estado 2 iniciado - Pistolas activadas');
+        console.log('🎆 ===============================================');
     });
 
-    // 2. MANEJADOR PARA RECIBIR Y REENVIAR EL FUEGO ARTIFICIAL (Recibido desde Mobile 1 o 2)
-    socket.on('lanzar_fuego_artificial', (data) => {
-        // La 'data' contendrá la intensidad del movimiento y el color o ID del móvil.
-        console.log(`Fuego artificial recibido de Mobile ${data.mobileId}. Reenviando a Visualizador.`);
+    // 2. MANEJADOR PARA DISPARAR BENGALAS (Recibido desde el Remoto)
+    socket.on('disparar_bengalas', () => {
+        console.log('🔫 ===== ORDEN DE DISPARO RECIBIDA =====');
+        console.log('📱 Enviando señal de disparo a móviles...');
         
-        // Reenviar la señal y la data (posición, color, etc.) a SOLO el Visualizador.
-        // Los móviles no necesitan saber cuándo dispara el otro.
-        io.emit('mostrar_fuego_artificial', {
-            mobileId: data.mobileId,
-            intensity: data.intensity // Usaremos la intensidad para hacer el efecto más grande/pequeño
-        });
+        // Enviar orden de disparo a todos los móviles
+        io.emit('orden_disparar');
+        
+        console.log('✅ Orden de disparo enviada');
+        console.log('🔫 ===================================');
+    });
+
+    // 3. MANEJADOR PARA RECIBIR DISPARO DE MÓVIL (Recibido desde Mobile 1 o 2)
+    socket.on('disparo_realizado', (data) => {
+        console.log('💥 ===== DISPARO RECIBIDO =====');
+        console.log('📱 Móvil ID:', data.mobileId);
+        console.log('📊 Orientación:', data.orientation);
+        console.log('🎯 Apuntando arriba:', data.apuntandoArriba);
+        console.log('⏰ Timestamp:', new Date().toISOString());
+        
+        if (data.apuntandoArriba) {
+            console.log('🚀 Disparo válido - enviando al visualizador');
+            
+            // Reenviar disparo al visualizador con efecto de luz
+            io.emit('mostrar_disparo_luz', {
+                mobileId: data.mobileId,
+                color: data.mobileId === 1 ? '#ff6b6b' : '#4ecdc4', // Colores diferentes por móvil
+                intensity: data.intensity || 1,
+                timestamp: Date.now()
+            });
+            
+            // Después de 3 segundos, activar cámaras para selfies
+            setTimeout(() => {
+                console.log('📸 ===== ACTIVANDO CÁMARAS PARA SELFIES =====');
+                console.log('📱 Enviando señal para activar selfies...');
+                io.emit('activar_selfies');
+                console.log('✅ Cámaras de selfies activadas');
+                console.log('📸 ==========================================');
+            }, 3000);
+        } else {
+            console.log('❌ Disparo inválido - móvil no apunta arriba');
+        }
+        
+        console.log('💥 =============================');
     });
 });
 

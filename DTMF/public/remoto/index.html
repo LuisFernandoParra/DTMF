@@ -47,6 +47,24 @@
             color: #bdc3c7;
         }
         
+        .current-state {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+        }
+        
+        .state-indicator {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .state-text {
+            font-size: 1.3em;
+            color: #ecf0f1;
+        }
+        
         .control-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -152,6 +170,14 @@
             box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
         }
         
+        .btn:disabled {
+            background: #7f8c8d !important;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+            opacity: 0.6;
+        }
+        
         .music-controls {
             display: flex;
             gap: 10px;
@@ -210,6 +236,10 @@
             to { transform: translateX(0); }
         }
         
+        .hidden {
+            display: none;
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .control-grid {
@@ -233,27 +263,46 @@
             <p class="subtitle">Bad Bunny DTMF Experience - Panel de Control</p>
         </div>
         
+        <div class="current-state">
+            <div class="state-indicator" id="state-indicator">⏳</div>
+            <p class="state-text" id="state-text">Sistema en espera - Selecciona un estado para comenzar</p>
+        </div>
+        
         <div class="control-grid">
-            <!-- Sección de Estados -->
+            <!-- Sección de Estados Principales -->
             <div class="control-section">
                 <h3 class="section-title">
                     <span class="icon">🎬</span>
-                    Control de Estados
+                    Estados Principales
                 </h3>
                 <div class="btn-group">
                     <button class="btn btn-primary" id="btn-estado2">
-                        🎆 Iniciar Estado 2
-                        <div style="font-size: 0.8em; margin-top: 5px;">Fuegos artificiales</div>
+                        🔫 Estado 2: Pistolas de Bengalas
+                        <div style="font-size: 0.8em; margin-top: 5px;">Fuegos artificiales interactivos</div>
                     </button>
                     <button class="btn btn-success" id="btn-estado3">
-                        📸 Activar Estado 3
-                        <div style="font-size: 0.8em; margin-top: 5px;">Foto grupal y maraca</div>
+                        📸 Estado 3: Foto Grupal
+                        <div style="font-size: 0.8em; margin-top: 5px;">Foto, stickers y maraca</div>
                     </button>
                 </div>
             </div>
             
-            <!-- Sección de Foto -->
-            <div class="control-section">
+            <!-- Controles del Estado 2 (Pistolas) -->
+            <div class="control-section hidden" id="estado2-controls">
+                <h3 class="section-title">
+                    <span class="icon">🔫</span>
+                    Control de Pistolas
+                </h3>
+                <div class="btn-group">
+                    <button class="btn btn-warning" id="btn-disparar">
+                        💥 ¡DISPARAR BENGALAS!
+                        <div style="font-size: 0.8em; margin-top: 5px;">Orden de fuego</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Controles del Estado 3 (Foto) -->
+            <div class="control-section hidden" id="estado3-controls">
                 <h3 class="section-title">
                     <span class="icon">📸</span>
                     Control de Foto
@@ -270,7 +319,7 @@
                 </div>
             </div>
             
-            <!-- Sección de Música -->
+            <!-- Sección de Música (Siempre visible) -->
             <div class="control-section">
                 <h3 class="section-title">
                     <span class="icon">🎵</span>
