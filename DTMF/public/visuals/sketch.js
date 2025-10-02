@@ -10,6 +10,7 @@ let videoElement;
 let showVideo = false;
 let videoStartTime = 0;
 let musica;
+let stickerImages = [];
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -21,6 +22,12 @@ function setup() {
 
     // Cargar sonido
     musica = loadSound('../assets/sonido/cancion.mp3');
+    
+    // Cargar imágenes de stickers (todas palmeras por ahora)
+    stickerImages[0] = loadImage('../assets/palmera.png');
+    stickerImages[1] = loadImage('../assets/palmera.png');
+    stickerImages[2] = loadImage('../assets/palmera.png');
+    stickerImages[3] = loadImage('../assets/palmera.png');
     
     // Escuchar eventos del servidor
     socket.on('currentState', (data) => {
@@ -159,12 +166,13 @@ function showPhoto() {
 function showSticker(stickerData) {
     // Dibujar sticker en la posición correcta
     push();
-    translate(stickerData.x, stickerData.y);
-    fill(255, 255, 0);
-    ellipse(0, 0, 50, 50);
-    fill(0);
-    textAlign(CENTER);
-    text(stickerData.type, 0, 0);
+    translate(stickerData.x * width, stickerData.y * height);
+    
+    // Mostrar imagen de sticker según su tipo
+    let stickerIndex = parseInt(stickerData.stickerId.replace('sticker', '')) - 1;
+    if (stickerImages[stickerIndex]) {
+        image(stickerImages[stickerIndex], -30, -30, 60, 60);
+    }
     pop();
 }
 
