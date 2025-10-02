@@ -1,152 +1,252 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Visualizador DTMF</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/addons/p5.sound.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador - Bad Bunny DTMF</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: black; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        .visualizer-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .background-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1) 2px, transparent 2px),
+                radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 2px, transparent 2px);
+            background-size: 100px 100px;
+            animation: backgroundFloat 20s ease-in-out infinite;
+        }
+        
+        @keyframes backgroundFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-10px, -10px) rotate(1deg); }
+            50% { transform: translate(10px, -5px) rotate(-1deg); }
+            75% { transform: translate(-5px, 10px) rotate(0.5deg); }
+        }
+        
+        .content-area {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .waiting-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        
+        .logo {
+            font-size: 8em;
+            margin-bottom: 30px;
+            animation: pulse 3s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+        
+        .title {
+            font-size: 4em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titleGlow 4s ease-in-out infinite;
+        }
+        
+        @keyframes titleGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+        
+        .subtitle {
+            font-size: 2em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 40px;
+        }
+        
+        .status-message {
+            font-size: 1.5em;
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px 40px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .photo-display {
+            position: relative;
+            max-width: 80vw;
+            max-height: 80vh;
+            margin: 0 auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 5px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .photo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .sticker-overlay {
+            position: absolute;
+            font-size: 3em;
+            z-index: 20;
+            animation: stickerPop 0.5s ease-out;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
+        }
+        
+        @keyframes stickerPop {
+            0% { transform: scale(0) rotate(-180deg); }
+            50% { transform: scale(1.2) rotate(-90deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        
+        .maraca-effect {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 6em;
+            z-index: 100;
+            pointer-events: none;
+            animation: maracaShake 0.5s ease-out;
+        }
+        
+        @keyframes maracaShake {
+            0%, 100% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+            25% { transform: translate(-60%, -40%) rotate(-10deg) scale(1.1); }
+            50% { transform: translate(-40%, -60%) rotate(10deg) scale(1.2); }
+            75% { transform: translate(-60%, -40%) rotate(-5deg) scale(1.1); }
+        }
+        
+        .instruction-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+        
+        .instruction-icon {
+            font-size: 10em;
+            margin-bottom: 40px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-30px); }
+            60% { transform: translateY(-15px); }
+        }
+        
+        .instruction-text {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .instruction-subtext {
+            font-size: 1.8em;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .smile-video {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
+        }
+        
+        .music-indicator {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            backdrop-filter: blur(10px);
+            z-index: 50;
+        }
+        
+        .music-playing {
+            animation: musicPulse 1s infinite;
+        }
+        
+        @keyframes musicPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        /* Responsive para pantallas grandes */
+        @media (min-width: 1920px) {
+            .logo { font-size: 12em; }
+            .title { font-size: 6em; }
+            .subtitle { font-size: 3em; }
+            .instruction-icon { font-size: 15em; }
+            .instruction-text { font-size: 4em; }
+        }
     </style>
 </head>
 <body>
-    <script>
-        const socket = io();
+    <div class="visualizer-container">
+        <div class="background-animation"></div>
+        <div class="content-area" id="content-area">
+            <!-- El contenido se generará dinámicamente -->
+        </div>
+        <div class="music-indicator" id="music-indicator" style="display: none;">
+            🎵 Música
+        </div>
+    </div>
 
-        let estadoActual = 0;
-        let fotoMostrada = null;
-        let stickers = []; // Aquí se almacenarán los stickers recibidos
-        let shakeMagnitude = 0;
-        let textoAnimado = "Junten todos para la foto";
-
-        let musicaFondo;
-        
-        // Objeto para almacenar las imágenes de los stickers
-        const stickerImages = {};
-
-        function preload() {
-            // Precargamos las imágenes de los stickers.
-            // Asegúrate de que las rutas sean correctas.
-            stickerImages['sticker-1'] = loadImage('../assets/palmera.png');
-            stickerImages['sticker-2'] = loadImage('../assets/palmera.png');
-            stickerImages['sticker-3'] = loadImage('../assets/palmera.png');
-            stickerImages['sticker-4'] = loadImage('../assets/palmera.png');
-
-            // Cargar la música
-            musicaFondo = loadSound('../assets/sonido/cancion.mp3');
-        }
-
-        function setup() {
-            createCanvas(windowWidth, windowHeight);
-            textAlign(CENTER, CENTER);
-            textSize(50);
-            noStroke();
-        }
-
-        function draw() {
-            background(0);
-
-            // Estado 1: Pantalla de espera para la foto
-            if (estadoActual === 1) {
-                fill(255);
-                text(textoAnimado, width / 2, height / 2);
-            } 
-            
-            // Estado 2: Foto tomada y maraca activa
-            else if (estadoActual === 2) {
-                if (fotoMostrada) {
-                    imageMode(CENTER);
-                    image(fotoMostrada, width / 2, height / 2, windowWidth, windowHeight);
-                }
-                
-                // ¡NUEVO! Dibujar los stickers en la pantalla
-                stickers.forEach(s => {
-                    const stickerImg = stickerImages[s.stickerId];
-                    if (stickerImg) {
-                        // Calcular las coordenadas absolutas
-                        const x = s.x * width;
-                        const y = s.y * height;
-                        imageMode(CENTER);
-                        image(stickerImg, x, y, 100, 100); // 100x100 es un tamaño de ejemplo
-                    }
-                });
-
-                // Efecto de la maraca
-                if (shakeMagnitude > 0) {
-                    fill(255, 255, 255, 100);
-                    noStroke();
-                    ellipse(width / 2, height / 2, shakeMagnitude * 10);
-                    shakeMagnitude *= 0.9;
-                }
-            }
-            
-            // Estado 3: Foto final
-            else if (estadoActual === 3) {
-                if (fotoMostrada) {
-                    imageMode(CENTER);
-                    image(fotoMostrada, width / 2, height / 2, windowWidth, windowHeight);
-                }
-            }
-        }
-
-        // --- Manejadores de eventos de Socket.io ---
-
-        socket.on('cambiar_a_escena_3', () => {
-            console.log('Cambiando a escena del Estado 3...');
-            estadoActual = 1;
-        });
-
-        socket.on('mostrar_foto', (imageData) => {
-            console.log('Visualizador recibe la foto.');
-            estadoActual = 2;
-            loadImage(imageData, img => {
-                fotoMostrada = img;
-            });
-        });
-
-        // ¡NUEVO! Manejador para el efecto de la maraca
-        socket.on('efecto_maraca', (data) => {
-            const magnitude = Math.sqrt(data.x * data.x + data.y * data.y + data.z * data.z);
-            shakeMagnitude = magnitude;
-            console.log('Visualizador recibe datos de maraca. Magnitud:', magnitude);
-        });
-
-        // ¡NUEVO! Manejador para los stickers
-        socket.on('agregar_sticker_visualizador', (stickerData) => {
-            console.log('Visualizador recibe un sticker.');
-            stickers.push(stickerData);
-        });
-
-        socket.on('mostrar_foto_final', (data) => {
-            console.log('Visualizador recibe la foto final.');
-            estadoActual = 3;
-            loadImage(data.foto, img => {
-                fotoMostrada = img;
-            });
-        });
-
-        // Manejar los comandos de música desde el Remoto
-        socket.on('control_musica_visualizador', (action) => {
-            console.log(`Visualizador recibe orden de música: ${action}`);
-
-            if (musicaFondo.isLoaded()) {
-                if (action === 'play' && !musicaFondo.isPlaying()) {
-                    musicaFondo.play();
-                    console.log('Música de fondo reproducida.');
-                } else if (action === 'pause' && musicaFondo.isPlaying()) {
-                    musicaFondo.pause();
-                    console.log('Música de fondo pausada.');
-                } else if (action === 'forward') {
-                    const currentTime = musicaFondo.currentTime();
-                    const newTime = currentTime + 10;
-                    // Asegurarse de no adelantar más allá de la duración
-                    if (newTime < musicaFondo.duration()) {
-                        musicaFondo.jump(newTime);
-                    }
-                    console.log('Música de fondo adelantada 10 segundos.');
-                }
-            }
-        });
-    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
+    <script src="sketch.js"></script>
 </body>
 </html>

@@ -1,65 +1,304 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Remoto DTMF</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Remoto - Bad Bunny DTMF</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header .subtitle {
+            font-size: 1.2em;
+            color: #bdc3c7;
+        }
+        
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .control-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .section-title {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            color: #ecf0f1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title .icon {
+            font-size: 1.2em;
+        }
+        
+        .btn-group {
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #333;
-            color: white;
-            margin: 0;
-            text-align: center;
-            gap: 20px;
+            gap: 15px;
         }
-        .btn-control {
-            padding: 20px 40px;
-            font-size: 1.5em;
-            font-weight: bold;
-            cursor: pointer;
+        
+        .btn {
+            padding: 15px 25px;
+            font-size: 1.1em;
             border: none;
             border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
             color: white;
-            transition: transform 0.2s, background-color 0.2s;
         }
-        #btn-estado3 {
-            background-color: #ff6347; /* Tomato */
-        }
-        #btn-foto {
-            background-color: #4682b4; /* SteelBlue */
-        }
-        #btn-finalizar {
-            background-color: #3cb371; /* MediumSeaGreen */
-        }
-        .btn-control:active {
-            transform: scale(0.95);
-        }
-
-
         
-
+        .btn-primary:hover {
+            background: linear-gradient(45deg, #2980b9, #1f5582);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
         
+        .btn-success {
+            background: linear-gradient(45deg, #27ae60, #229954);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(45deg, #229954, #1e8449);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: linear-gradient(45deg, #e67e22, #d35400);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: linear-gradient(45deg, #c0392b, #a93226);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        .music-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .music-controls .btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 1em;
+        }
+        
+        .status-bar {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .status-text {
+            font-size: 1.1em;
+            color: #bdc3c7;
+        }
+        
+        .active-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #27ae60;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(39, 174, 96, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            z-index: 1000;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .music-controls {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Control Remoto DTMF</h1>
-    <button id="btn-estado2" class="btn-control">INICIAR ESTADO 2: PETARDOS</button>
-    <button id="btn-estado3" class="btn-control">Activar Estado 3</button>
-    <button id="btn-foto" class="btn-control">Habilitar Foto</button>
-    <button id="btn-finalizar" class="btn-control">Finalizar</button>
-
-    <div class="controls-container">
-        <h3>Controles de Música</h3>
-        <button id="play-btn">Reproducir</button>
-        <button id="pause-btn">Pausar</button>
-        <button id="forward-btn">Adelantar 10s</button>
+    <div class="container">
+        <div class="header">
+            <h1>🎛️ Control Remoto</h1>
+            <p class="subtitle">Bad Bunny DTMF Experience - Panel de Control</p>
+        </div>
+        
+        <div class="control-grid">
+            <!-- Sección de Estados -->
+            <div class="control-section">
+                <h3 class="section-title">
+                    <span class="icon">🎬</span>
+                    Control de Estados
+                </h3>
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="btn-estado2">
+                        🎆 Iniciar Estado 2
+                        <div style="font-size: 0.8em; margin-top: 5px;">Fuegos artificiales</div>
+                    </button>
+                    <button class="btn btn-success" id="btn-estado3">
+                        📸 Activar Estado 3
+                        <div style="font-size: 0.8em; margin-top: 5px;">Foto grupal y maraca</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Sección de Foto -->
+            <div class="control-section">
+                <h3 class="section-title">
+                    <span class="icon">📸</span>
+                    Control de Foto
+                </h3>
+                <div class="btn-group">
+                    <button class="btn btn-warning" id="btn-foto">
+                        🔓 Habilitar Foto
+                        <div style="font-size: 0.8em; margin-top: 5px;">Permitir tomar foto</div>
+                    </button>
+                    <button class="btn btn-danger" id="btn-finalizar">
+                        🏁 Finalizar Experiencia
+                        <div style="font-size: 0.8em; margin-top: 5px;">Terminar sesión</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Sección de Música -->
+            <div class="control-section">
+                <h3 class="section-title">
+                    <span class="icon">🎵</span>
+                    Control de Música
+                </h3>
+                <div class="music-controls">
+                    <button class="btn btn-success" id="play-btn">
+                        ▶️ Play
+                    </button>
+                    <button class="btn btn-warning" id="pause-btn">
+                        ⏸️ Pause
+                    </button>
+                    <button class="btn btn-primary" id="forward-btn">
+                        ⏭️ Skip
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <p class="status-text">
+                <span class="active-indicator"></span>
+                Sistema activo - Todos los clientes conectados
+            </p>
+        </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script src="sketch.js"></script>
 </body>
 </html>
